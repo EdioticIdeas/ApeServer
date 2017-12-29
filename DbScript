@@ -1,0 +1,197 @@
+/*
+drop table student purge;
+drop table temp_student purge;
+drop table event purge;
+drop table lecture purge;
+drop table library_books purge;
+drop table notice purge;
+drop table rooms purge;
+drop table stu_attendence purge;
+drop table subject purge;
+drop table department purge;
+drop table staff purge;
+drop table teacherattendence purge;
+drop PROCEDURE update_student;
+drop type fee_struc;
+drop type qualification;
+drop SEQUENCE staff_sequence;
+*/
+
+create table department (
+department_id varchar(4),
+department_name varchar2(50),
+department_head varchar(8),
+CONSTRAINT department_pk primary key (department_id)
+);
+/
+create or replace TYPE Qualification AS OBJECT( 
+QUALI VARCHAR(50),
+STREAM varchar2(45),
+Compl_year number(4)
+);
+/
+create table staff(
+s_id varchar2(8),
+s_name varchar2(30),
+s_email varchar2(50) unique,
+s_mobile number(13),
+s_address varchar2(200),
+s_gradaute Qualification,
+s_post_graduate Qualification,
+s_PHD Qualification,
+sex varchar2(1),
+s_designation varchar2(20),
+department_id VARCHAR2(4),
+s_password varchar(20),
+s_manager_id varchar(8),
+constraint staff_pk primary key (s_id),
+CONSTRAINT staff_dept_fk FOREIGN key (department_id) references department(department_id),
+CONSTRAINT satff_mangr_fk FOREIGN key (s_manager_id) references Staff(s_id)
+);
+/
+create SEQUENCE staff_sequence start with 10000;
+/
+/*select staff_sequence.NEXTVAL from dual;*/
+
+create or replace TYPE fee_struc AS OBJECT(
+sem1 char(1),
+sem2 char(1),
+sem3 char(1),
+sem4 char(1),
+sem5 char(1),
+sem6 char(1),
+sem7 char(1),
+sem8 char(1),
+twf char(1)
+);
+/
+create table temp_student(
+st_name varchar2(30),
+f_name varchar2(30),
+m_name varchar2(30),
+g_name varchar2(30),
+addmission_date date,
+per_address varchar2(100),
+temp_address varchar2(100),
+DOB date,
+sex VARCHAR2(1),
+mobile number(13),
+email varchar2(50),
+catgry varchar2(4),
+department_id varchar(4),
+fees fee_struc
+);
+/
+create table student(
+rollno varchar2(12),
+password varchar(16), 
+st_name varchar2(30),
+f_name varchar2(30),
+m_name varchar2(30),
+g_name varchar2(30),
+addmission_date date,
+per_address varchar2(100),
+temp_address varchar2(100),
+DOB date,
+sex VARCHAR2(1),
+mobile number(13),
+email varchar2(50),
+catgry varchar2(4),
+department_id varchar(4),
+fees fee_struc,
+CONSTRAINT student_dpt_fk FOREIGN key (department_id) REFERENCES Department(department_id),
+CONSTRAINT student_pk PRIMARY key (rollno)
+);
+/
+create or replace procedure update_student as
+begin
+INSERT into student(rollno,st_name,g_name,ADDMISSION_DATE,per_address,temp_address,DOB,sex,mobile,email,catgry,department_id,fees)
+select 'stu' || to_char(ADDMISSION_DATE , 'YY') || DEPARTMENT_ID || (rank() over (PARTITION by DEPARTMENT_ID ORDER by ST_NAME || G_NAME || MOBILE)) as rollno,st_name,g_name,ADDMISSION_DATE,per_address,temp_address,DOB,sex,mobile,email,catgry,department_id,fees
+from TEMP_STUDENT;
+end;
+/
+CREATE table library_books(
+book_id NUMBER,
+title VARCHAR2(30),
+authur VARCHAR2(100),
+publisher VARCHAR2(30),
+genre VARCHAR2(80),
+issued_to_s VARCHAR2(12),
+issued_to_staff VARCHAR2(8),
+CONSTRAINT library_pk PRIMARY key (book_id),
+CONSTRAINT library_stu_fk FOREIGN key (issued_to_s) references student(rollno),
+CONSTRAINT library_sta_fk FOREIGN key (issued_to_staff) references staff(s_id)
+);
+/
+create table teacherAttendence(
+teacher_id VARCHAR2(8),
+present_date date,
+CONSTRAINT teacherAttendence_fk FOREIGN key (teacher_id) references staff(s_id),
+CONSTRAINT teacherAttendence_pk PRIMARY key (teacher_id,present_date)
+);
+/
+CREATE table subject(
+subject_id VARCHAR2(4),
+title VARCHAR2(15),
+department_id varchar(4),
+semester number(1),
+CONSTRAINT subject_pk PRIMARY key (subject_id),
+CONSTRAINT subject_department_fk FOREIGN key (department_id) references department(department_id)
+);
+/
+CREATE table rooms(
+room_id varchar2(3),
+room_name VARCHAR2(30),
+department_id VARCHAR2(4),
+CONSTRAINT rooms_pk primary key (room_id),
+CONSTRAINT room_dept_fk FOREIGN key (department_id) references Department(department_id)
+);
+
+create table lecture(
+lecture_id VARCHAR2(20),
+subject_id VARCHAR2(4),
+room_id VARCHAR2(3),
+staff_id VARCHAR2(8),
+lecture_date date,
+CONSTRAINT lecture_pk PRIMARY key (lecture_id),
+CONSTRAINT lecture_subject_fk FOREIGN key (subject_id) references subject(subject_id),
+CONSTRAINT lecture_room_fk FOREIGN key (room_id) references rooms(room_id),
+CONSTRAINT lecture_staff_fk FOREIGN key (staff_id) references staff(s_id)
+);
+/
+create SEQUENCE library_seq start with 10000;
+/
+create table stu_attendence(
+student_id VARCHAR2(12),
+lecture_id VARCHAR2(20),
+CONSTRAINT stu_attendence_pk PRIMARY key (student_id , lecture_id),
+CONSTRAINT stu_attendence_stu_fk FOREIGN key (student_id) references student(rollno),
+CONSTRAINT stu_attendence_lecture_fk FOREIGN key (lecture_id) references lecture(lecture_id)
+);
+/
+create table notice(
+notice_id VARCHAR2(20),
+source_id VARCHAR2(8),
+title VARCHAR2(30),
+staffSpec char(1),
+details VARCHAR2(200),
+target_dept VARCHAR2(3),
+CONSTRAINT notice_pk PRIMARY key (notice_id),
+CONSTRAINT notice_stf_fk FOREIGN key (source_id) references staff(s_id),
+CONSTRAINT notice_dpt_fk FOREIGN key (target_dept) references department(department_id)
+);
+/
+create table event(
+event_id varchar2(10),
+event_date date,
+title varchar2(30),
+details varchar2(200),
+source_id varchar2(8),
+managed_by varchar2(8),
+coordinated_by varchar2(12),
+CONSTRAINT event_pk primary key (event_id),
+CONSTRAINT event_src_fk FOREIGN key (source_id) references staff(s_id),
+CONSTRAINT event_mng_fk FOREIGN key (managed_by) references staff(s_id),
+CONSTRAINT event_cor_fk FOREIGN key (coordinated_by) references student(rollno)
+);
+/
